@@ -22,6 +22,8 @@ public class Renderer {
 
     public static float bloomIntensity = 0.5F;
     public static int bloomRadius = 10;
+    
+    public static ThreadPool tpool = new ThreadPool(4);
 
     /** Renders the scene to a Pixel buffer
      * @param scene The scene to Render
@@ -80,6 +82,7 @@ public class Renderer {
             Arrays.fill(pixels, offset, offset + length, rgb);
         }
     }
+    
     /** Renders the scene to a java.awt.Graphics object
      * @param scene The scene to Render
      * @param width The width of the desired output
@@ -186,6 +189,16 @@ public class Renderer {
         }
 
         System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+    
+    /** Renders the scene to a java.awt.Graphics object BUT USING A THREAD POOL
+     * @param scene The scene to Render
+     * @param width The width of the desired output
+     * @param height The height of the desired output
+     * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
+     */
+    public static void renderScene_ThreadPool(Scene scene, Graphics gfx, int width, int height, float resolution) {
+        
     }
 
     /** Same as the above but applies Post-Processing effects before drawing. */
