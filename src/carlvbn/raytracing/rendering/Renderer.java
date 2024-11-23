@@ -10,7 +10,9 @@ import carlvbn.raytracing.solids.Solid;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class Renderer {
     private static final float GLOBAL_ILLUMINATION = 0.3F;
@@ -40,7 +42,7 @@ public class Renderer {
 
         return pixelBuffer;
     }
-
+    
     /**
      * Fills a rectangle area of a BufferedImage with a specified color.
      * This function is thread-safe as long as no two threads write to the same pixels.
@@ -84,7 +86,7 @@ public class Renderer {
      * @param height The height of the desired output
      * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
      */
-    public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    public static void renderScene3(Scene scene, Graphics gfx, int width, int height, float resolution) {
         int blockSize = (int) (1 / resolution);
         long start = System.currentTimeMillis();
 
@@ -97,6 +99,90 @@ public class Renderer {
                 gfx.setColor(pixelData.getColor().toAWTColor());
                 gfx.fillRect(x, y, blockSize, blockSize);
             }
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+    
+    /** Renders the scene to a java.awt.Graphics object BUT USING A RUNNABLE/PIXEL
+     * @param scene The scene to Render
+     * @param width The width of the desired output
+     * @param height The height of the desired output
+     * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
+     */
+    public static void renderScene2(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    	resolution = 0.08f;
+        int blockSize = (int) (1 / resolution);
+        List<Thread> threads = new ArrayList<>();
+        
+        long start = System.currentTimeMillis();
+
+        for (int x = 0; x<width; x+=blockSize) {
+            for (int y = 0; y<height; y+=blockSize) {
+            	int _X =x; int _Y =y; //We did that cuz local variables x and y were defined in an enclosing scope
+            	Runnable pixelTask = () -> {
+            		float[] uv = getNormalizedScreenCoordinates(_X, _Y, width, height);
+                    PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+                    
+                    synchronized(gfx) {
+                    	gfx.setColor(pixelData.getColor().toAWTColor());
+                        gfx.fillRect(_X, _Y, blockSize, blockSize);
+                    }
+                    
+            	};
+                Thread thread = new Thread(pixelTask);
+                threads.add(thread);
+                thread.start();
+            }
+        }
+        
+        for (Thread thread : threads) {
+        	try {
+				thread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+    
+    /** Renders the scene to a java.awt.Graphics object BUT USING A RUNNABLE/COLUMN
+     * @param scene The scene to Render
+     * @param width The width of the desired output
+     * @param height The height of the desired output
+     * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
+     */
+    public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    	resolution = 0.08f;
+        int blockSize = (int) (1 / resolution);
+        List<Thread> threads = new ArrayList<>();
+        
+        long start = System.currentTimeMillis();
+
+        for (int x = 0; x<width; x+=blockSize) {
+        	int _X = x; //We did that cuz local variable x was defined in an enclosing scope
+        	Runnable columnTask = () -> {
+        		for (int y = 0; y<height; y+=blockSize) {
+                    float[] uv = getNormalizedScreenCoordinates(_X, y, width, height);
+                    PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+                    synchronized(gfx) {
+                    	gfx.setColor(pixelData.getColor().toAWTColor());
+                        gfx.fillRect(_X, y, blockSize, blockSize);
+                    }
+                }
+        	};
+        	Thread thread = new Thread(columnTask);
+            threads.add(thread);
+            thread.start();
+        }
+        
+        for (Thread thread : threads) {
+        	try {
+				thread.join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
         }
 
         System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
