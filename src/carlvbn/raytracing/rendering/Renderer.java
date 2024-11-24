@@ -13,6 +13,10 @@ import java.awt.image.DataBufferInt;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Renderer {
     private static final float GLOBAL_ILLUMINATION = 0.3F;
@@ -22,8 +26,6 @@ public class Renderer {
 
     public static float bloomIntensity = 0.5F;
     public static int bloomRadius = 10;
-    
-    public static ThreadPool tpool = new ThreadPool(4);
 
     /** Renders the scene to a Pixel buffer
      * @param scene The scene to Render
@@ -89,7 +91,7 @@ public class Renderer {
      * @param height The height of the desired output
      * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
      */
-    public static void renderScene3(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    public static void renderScene_(Scene scene, Graphics gfx, int width, int height, float resolution) {
         int blockSize = (int) (1 / resolution);
         long start = System.currentTimeMillis();
 
@@ -156,7 +158,7 @@ public class Renderer {
      * @param height The height of the desired output
      * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
      */
-    public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    public static void renderScene3(Scene scene, Graphics gfx, int width, int height, float resolution) {
     	resolution = 0.08f;
         int blockSize = (int) (1 / resolution);
         List<Thread> threads = new ArrayList<>();
@@ -191,15 +193,109 @@ public class Renderer {
         System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
     }
     
-    /** Renders the scene to a java.awt.Graphics object BUT USING A THREAD POOL
+    /** Renders the scene to a java.awt.Graphics object BUT USING A CUSTOM THREAD POOL
      * @param scene The scene to Render
      * @param width The width of the desired output
      * @param height The height of the desired output
      * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
      */
     public static void renderScene_ThreadPool(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    	ThreadPool tpool = new ThreadPool(8);
+    	resolution = 0.08f;
+    	int blockSize = (int) (1 / resolution);
+    	//1 threadpool/column
+    	int taskCount = width/blockSize;
+    	CountDownLatch latch = new CountDownLatch(taskCount);
+    	
+        long start = System.currentTimeMillis();
+
+        for (int x = 0; x<width; x+=blockSize) {
+        	int _X = x; //We did that cuz local variable x was defined in an enclosing scope
+        	try {
+				tpool.submit(() -> {
+					try {
+						for (int y = 0; y<height; y+=blockSize) {
+					        float[] uv = getNormalizedScreenCoordinates(_X, y, width, height);
+					        PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+					        synchronized(gfx) {
+					        	gfx.setColor(pixelData.getColor().toAWTColor());
+					            gfx.fillRect(_X, y, blockSize, blockSize);
+					        }
+					    }
+					} finally {
+						latch.countDown();
+					}
+
+				});
+			
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+        }
         
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
     }
+    
+    
+    /** Renders the scene to a java.awt.Graphics object BUT USING ExecutorService.newFixedThreadPool
+     * @param scene The scene to Render
+     * @param width The width of the desired output
+     * @param height The height of the desired output
+     * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
+     */
+    // renderScene_FixedThreadPool
+    public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
+    	ExecutorService exec = Executors.newFixedThreadPool(200);
+    	
+    	resolution = 0.08f;
+    	int blockSize = (int) (1 / resolution);
+    	//1 threadpool/column
+    	int taskCount = width/blockSize;
+    	CountDownLatch latch = new CountDownLatch(taskCount);
+    	
+        long start = System.currentTimeMillis();
+
+        for (int x = 0; x<width; x+=blockSize) {
+        	int _X = x; //We did that cuz local variable x was defined in an enclosing scope
+        	exec.submit(() -> {
+				try {
+					for (int y = 0; y<height; y+=blockSize) {
+				        float[] uv = getNormalizedScreenCoordinates(_X, y, width, height);
+				        PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+				        synchronized(gfx) {
+				        	gfx.setColor(pixelData.getColor().toAWTColor());
+				            gfx.fillRect(_X, y, blockSize, blockSize);
+				        }
+				    }
+				} finally {
+					latch.countDown();
+				}
+
+			});
+        }
+        
+		try {
+			latch.await();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+        
+        exec.shutdown();
+        try {
+			exec.awaitTermination(1, TimeUnit.HOURS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+    }
+    
 
     /** Same as the above but applies Post-Processing effects before drawing. */
     public static void renderScenePostProcessed(Scene scene, Graphics gfx, int width, int height, float resolution) {
