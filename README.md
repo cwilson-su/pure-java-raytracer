@@ -16,5 +16,6 @@ This program was made for testing/learning purposes only, which is why it runs m
 
 Rendered images will be saved as `output.png` in the execution directory of the program and image sequences will be saved inside the `image_sequence` folder in the execution directory.
 
-@@ Here, we are making a parallel version of this raytracer using the Java Executors and Thread pools frameworks. @@
+<code style="color : LightSkyBlue"> Here, we are making a parallel version of this raytracer using the Java Executors and Thread pools frameworks. </code>
+
 
