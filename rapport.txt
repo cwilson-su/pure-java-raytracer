@@ -1,0 +1,187 @@
+note: on a ecrit nos fonctions en anglais pour match avec le style original du code
+
+Q2.
+principaux elements de cette fonction:
+- rend la scene via un objet 'Graphics', avec des parametres comme la scene sur laquelle travailler, la largeur, la hauteur et la resolution
+- Calcule ensuite le taille du blocks
+- la doucle boucle parcourt chaque bloc de pixel 
+- 'getNormalizedScreenCoordinates' a linterieur des 2 boucles normalise les coordonees(les met dans une plage acceptable)
+- 'computePixelInfo' calcule les donnees de chaque pixel en focntion de la scene et de ses coordonees
+- gfx.setColor et gfx.fillRect dessinent le pixel ou le bloc sur le graphique
+
+Q4.
+- probleme avec gfx: Graphics pas thread-safe 
+- Slution: bloc synchronized 
+
+Q5. trop grand nombre de threads ==> gros temps car beaucoup de runnable a attendre
+Comparaison des temps:
+--sans thread :--
+Rendered in 2068ms
+Rendered in 1990ms
+Rendered in 2014ms
+Rendered in 2017ms
+Rendered in 1964ms
+Rendered in 2579ms
+Rendered in 1903ms
+Rendered in 1948ms
+===> Lent, car tout est sequentiel
+
+===========================UN UTILISANT DES RUNNABLE POUR CREER DES THREAD======================
+--un thread par pixel:--
+Rendered in 1104ms
+Rendered in 1177ms
+Rendered in 1242ms
+Rendered in 1153ms
+Rendered in 1564ms
+Rendered in 1685ms
+Rendered in 1286ms
+===> Plus rapide, mais beaucoup de thread crees (trop de travail de calcul rendering a faire)
+
+--un thread par column:--
+Rendered in 39ms
+Rendered in 53ms
+Rendered in 40ms
+Rendered in 41ms
+Rendered in 39ms
+Rendered in 54ms
+Rendered in 42ms
+Rendered in 50ms
+===> Plus rapide des 3 techniques, moins de threads
+
+Q7. 
+==================================AVEC MA 'CUSTOM' THREADPOOL========================================
+taille de la ArrayBlockingQueue = 1000
+taille ThreadPool = 1
+Rendered in 30ms
+Rendered in 46ms
+Rendered in 27ms
+Rendered in 30ms
+Rendered in 28ms
+Rendered in 22ms
+Rendered in 37ms
+
+
+taille ThreadPool = 4
+Rendered in 23ms
+Rendered in 22ms
+Rendered in 17ms
+Rendered in 24ms
+Rendered in 17ms
+Rendered in 23ms
+Rendered in 22ms
+Rendered in 31ms
+
+taille ThreadPool = 8
+Rendered in 21ms
+Rendered in 19ms
+Rendered in 22ms
+Rendered in 21ms
+Rendered in 25ms
+Rendered in 22ms
+Rendered in 22ms
+Rendered in 24ms
+Rendered in 22ms
+Rendered in 18ms
+
+taille ThreadPool = 200
+Rendered in 23ms
+Rendered in 20ms
+Rendered in 26ms
+Rendered in 28ms
+Rendered in 26ms
+Rendered in 20ms
+Rendered in 23ms
+Rendered in 30ms
+Rendered in 23ms
+Rendered in 22ms
+Rendered in 26ms
+Rendered in 27ms
+
+
+Q9. 
+=======================AVEC ExecutorService.newFixedThreadPool=================================
+taille ThreadPool = 1
+Rendered in 23ms
+Rendered in 31ms
+Rendered in 33ms
+Rendered in 27ms
+Rendered in 18ms
+Rendered in 21ms
+Rendered in 31ms
+Rendered in 33ms
+Rendered in 36ms
+Rendered in 23ms
+Rendered in 31ms
+Rendered in 20ms
+
+taille ThreadPool = 4
+Rendered in 18ms
+Rendered in 19ms
+Rendered in 19ms
+Rendered in 23ms
+Rendered in 17ms
+Rendered in 19ms
+Rendered in 20ms
+Rendered in 19ms
+Rendered in 19ms
+Rendered in 22ms
+
+taille ThreadPool = 8
+Rendered in 25ms
+Rendered in 33ms
+Rendered in 29ms
+Rendered in 41ms
+Rendered in 25ms
+Rendered in 28ms
+Rendered in 20ms
+Rendered in 31ms
+Rendered in 29ms
+Rendered in 28ms
+Rendered in 26ms
+Rendered in 32ms
+Rendered in 26ms
+Rendered in 42ms
+Rendered in 32ms
+Rendered in 33ms
+
+taille ThreadPool = 200
+Rendered in 29ms
+Rendered in 25ms
+Rendered in 33ms
+Rendered in 33ms
+Rendered in 30ms
+Rendered in 29ms
+Rendered in 34ms
+Rendered in 41ms
+Rendered in 30ms
+Rendered in 39ms
+Rendered in 34ms
+Rendered in 42ms
+Rendered in 45ms
+Rendered in 49ms
+Rendered in 37ms
+Rendered in 36ms
+
+Q10. 
+======================ExecutorService.newSingleThreadExecutor=======================
+Rendered in 22ms
+Rendered in 21ms
+Rendered in 19ms
+Rendered in 27ms
+Rendered in 32ms
+Rendered in 22ms
+Rendered in 22ms
+Rendered in 23ms
+Rendered in 23ms
+Rendered in 25ms
+Rendered in 24ms
+Rendered in 22ms
+Rendered in 22ms
+Rendered in 24ms
+Rendered in 24ms
+Rendered in 22ms
+Rendered in 22ms
+Rendered in 28ms
+
+
+========================ExecutorService.ThreadPerTaskExecutor========================
